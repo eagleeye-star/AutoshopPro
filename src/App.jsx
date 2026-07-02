@@ -385,6 +385,45 @@ function LicenseExpiredScreen({ license, onRenew }) {
   );
 }
 
+// ── RESET MODAL ───────────────────────────────────────────────────────────────
+function ResetModal({ onConfirm, onCancel, adminPin, accent, cardBg }) {
+  const [pin,  setPin]  = useState("");
+  const [err,  setErr]  = useState("");
+  const [step, setStep] = useState(1);
+  const check = () => {
+    if (!adminPin) { setErr("No admin PIN set yet. Complete the setup wizard first."); return; }
+    if (pin !== String(adminPin)) { setErr("Incorrect PIN. Try again."); setPin(""); return; }
+    setStep(2);
+  };
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:9999, padding:20 }}>
+      <div style={{ background: cardBg||"#1f2330", border:"1px solid #ef444455", borderRadius:14, padding:28, width:"min(94vw,400px)" }}>
+        {step === 1 ? (<>
+          <div style={{ fontSize:18, fontWeight:800, color:"#ef4444", marginBottom:8 }}>🔐 Admin PIN Required</div>
+          <p style={{ fontSize:13, color:"#94a3b8", marginBottom:16 }}>Enter your admin PIN to access the reset function.</p>
+          <input type="password" inputMode="numeric" maxLength={6} value={pin}
+            onChange={e=>{setPin(e.target.value.replace(/\D/g,""));setErr("");}}
+            onKeyDown={e=>e.key==="Enter"&&check()} placeholder="••••" autoFocus
+            style={{ width:"100%", padding:12, background:"rgba(255,255,255,0.06)", border:`1.5px solid ${err?"#ef4444":"rgba(255,255,255,0.15)"}`, borderRadius:8, color:"#fff", fontSize:20, textAlign:"center", letterSpacing:6, outline:"none", boxSizing:"border-box", marginBottom:8, fontFamily:"inherit" }} />
+          {err && <div style={{ color:"#fca5a5", fontSize:12, marginBottom:8 }}>{err}</div>}
+          <div style={{ display:"flex", gap:10, marginTop:8 }}>
+            <button onClick={onCancel} style={{ flex:1, padding:"10px 0", background:"transparent", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, color:"#94a3b8", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
+            <button onClick={check} style={{ flex:1, padding:"10px 0", background:accent||"#2E86AB", color:"#fff", border:"none", borderRadius:8, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Verify PIN</button>
+          </div>
+        </>) : (<>
+          <div style={{ fontSize:18, fontWeight:800, color:"#ef4444", marginBottom:8 }}>⚠️ Confirm Full Reset</div>
+          <p style={{ fontSize:13, color:"#94a3b8", marginBottom:6, lineHeight:1.7 }}>This will <strong style={{ color:"#ef4444" }}>permanently delete ALL data</strong> — records, settings, everything.</p>
+          <p style={{ fontSize:13, color:"#ef4444", fontWeight:700, marginBottom:20 }}>This cannot be undone.</p>
+          <div style={{ display:"flex", gap:10 }}>
+            <button onClick={onCancel} style={{ flex:1, padding:"10px 0", background:"transparent", border:"1px solid rgba(255,255,255,0.15)", borderRadius:8, color:"#94a3b8", fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
+            <button onClick={onConfirm} style={{ flex:1, padding:"10px 0", background:"#dc2626", color:"#fff", border:"none", borderRadius:8, fontWeight:800, cursor:"pointer", fontFamily:"inherit" }}>Delete All Data</button>
+          </div>
+        </>)}
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function AutoShopPro() {
   const [license, setLicenseState] = useState(() => loadLicense());
@@ -457,7 +496,7 @@ export default function AutoShopPro() {
   }), [jobs]);
 
   const saveInst = (inst) => { setInstitution(inst); saveInstitution(STORAGE_KEY, inst); };
-  const adminPin = "1234"; // Users set their own after setup
+  const adminPin = (() => { try { return JSON.parse(localStorage.getItem("autoshop_setup")||"{}").pin||""; } catch { return ""; } })();
 
   return (
     <div style={{ background: "#1A1C1E", minHeight: "100vh", color: "#E8EDF2", fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
