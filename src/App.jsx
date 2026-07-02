@@ -24,39 +24,7 @@ const STAGE_COLORS = ["#6B7280", "#2E86AB", "#F4A261", "#F4A261", "#52B788", "#5
 const PRIORITIES = ["Low", "Normal", "High", "Urgent"];
 const PRIORITY_COLORS = { Low: "#6B7280", Normal: "#2E86AB", High: "#F4A261", Urgent: "#EF4444" };
 
-const SEED_JOBS = [
-  {
-    id: uid(), plateNumber: "GW 2341-23", ownerName: "Kwame Asante", ownerPhone: "0244 123 456",
-    vehicleMake: "Toyota Corolla", vehicleYear: "2019", mileage: "78,200 km",
-    problemDescription: "Car shakes badly when braking and there is a grinding noise from the front left wheel.",
-    faultCodes: ["C0031", "C0034"], mechanicDiagnosis: "Worn front left brake pads and warped rotor. Possible caliper sticking.",
-    stage: "In Repair", priority: "High", dateReceived: "2026-06-25", expectedResolution: "2026-07-01",
-    ownerRequests: "Use OEM parts only. Call before any extra work.", laborCost: 350, partsCost: 520,
-    notes: [{ id: uid(), text: "Brake rotor ordered from supplier.", time: "2026-06-26 09:15" }],
-    mechanicAssigned: "Kofi Mensah", paid: false,
-  },
-  {
-    id: uid(), plateNumber: "AS 7810-20", ownerName: "Abena Owusu", ownerPhone: "0557 987 654",
-    vehicleMake: "Honda Civic", vehicleYear: "2017", mileage: "112,000 km",
-    problemDescription: "Check engine light on for 3 weeks. Fuel consumption has increased.",
-    faultCodes: ["P0171", "P0300"], mechanicDiagnosis: "Lean fuel mixture and random misfires. Suspect dirty injectors and faulty O2 sensor.",
-    stage: "Diagnosing", priority: "Normal", dateReceived: "2026-06-27", expectedResolution: "2026-07-03",
-    ownerRequests: "Budget is GH₵800 max. Needs car back by Friday.",
-    laborCost: 200, partsCost: 380,
-    notes: [], mechanicAssigned: "Emmanuel Tetteh", paid: false,
-  },
-  {
-    id: uid(), plateNumber: "BA 4421-18", ownerName: "Yaw Boateng", ownerPhone: "0302 445 678",
-    vehicleMake: "Hyundai Tucson", vehicleYear: "2021", mileage: "45,000 km",
-    problemDescription: "AC stopped blowing cold air suddenly yesterday.",
-    faultCodes: ["B1479"], mechanicDiagnosis: "Low refrigerant, compressor clutch engaging intermittently.",
-    stage: "Ready", priority: "Low", dateReceived: "2026-06-24", expectedResolution: "2026-06-29",
-    ownerRequests: "No special requests.",
-    laborCost: 180, partsCost: 220,
-    notes: [{ id: uid(), text: "Recharged AC, tested cold air confirmed.", time: "2026-06-28 14:30" }],
-    mechanicAssigned: "Kofi Mensah", paid: true,
-  },
-];
+const SEED_JOBS = [];
 
 const BLANK_JOB = {
   plateNumber: "", ownerName: "", ownerPhone: "", vehicleMake: "", vehicleYear: "", mileage: "",
@@ -420,6 +388,8 @@ function LicenseExpiredScreen({ license, onRenew }) {
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function AutoShopPro() {
   const [license, setLicenseState] = useState(() => loadLicense());
+  const [institution, setInstitution] = useState(() => loadInstitution(STORAGE_KEY));
+  const [showReset, setShowReset] = useState(false);
   const [renewMode, setRenewMode]  = useState(false);
   const [jobs, setJobs]            = useState(() => loadJobs() || SEED_JOBS);
   const [modal, setModal]          = useState(null);
@@ -486,8 +456,14 @@ export default function AutoShopPro() {
     unpaid: jobs.filter(j => !j.paid && j.stage !== "Received").reduce((s, j) => s + (Number(j.laborCost) || 0) + (Number(j.partsCost) || 0), 0),
   }), [jobs]);
 
+  const saveInst = (inst) => { setInstitution(inst); saveInstitution(STORAGE_KEY, inst); };
+  const adminPin = "1234"; // Users set their own after setup
+
   return (
     <div style={{ background: "#1A1C1E", minHeight: "100vh", color: "#E8EDF2", fontFamily: "'Inter', 'Segoe UI', sans-serif" }}>
+
+      {/* Licence expiry banner (Update 8) */}
+      <ExpiryBanner expiry={license?.expiry} phone="0597147460" />
 
       {/* Trial warning banner */}
       {trialDaysLeft !== null && trialDaysLeft <= 7 && (
@@ -503,6 +479,7 @@ export default function AutoShopPro() {
           <div>
             <div style={{ fontWeight: 800, fontSize: 17, color: "#E8EDF2", letterSpacing: 0.3 }}>AutoShop Pro</div>
             <div style={{ fontSize: 11, color: "#6B7280", letterSpacing: 0.5 }}>MECHANIC JOB TRACKER</div>
+            {institution?.name && <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 600, marginTop: 1 }}>{institution.name}{institution.address ? ` · ${institution.address}` : ""}</div>}
           </div>
         </div>
         <button onClick={() => setModal({ ...BLANK_JOB })} style={{
@@ -653,6 +630,23 @@ export default function AutoShopPro() {
               {backupMsg.type === "ok" ? "✅ " : "❌ "}{backupMsg.text}
             </div>
           )}
+          {/* Institution Settings (Update 5) */}
+          <div style={{ background: "#2D3035", border: "1px solid #374151", borderRadius: 12, padding: 20, marginBottom: 16 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "#E8EDF2", marginBottom: 8 }}>🏢 Business Profile</div>
+            <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 14 }}>This name and address appears on receipts and in the app header.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input value={institution.name} onChange={e=>saveInst({...institution,name:e.target.value})} placeholder="Business Name" style={{ padding:"9px 11px", background:"#1A1C1E", border:"1px solid #374151", borderRadius:7, color:"#E8EDF2", fontSize:13, outline:"none", fontFamily:"inherit" }} />
+              <input value={institution.address} onChange={e=>saveInst({...institution,address:e.target.value})} placeholder="Address" style={{ padding:"9px 11px", background:"#1A1C1E", border:"1px solid #374151", borderRadius:7, color:"#E8EDF2", fontSize:13, outline:"none", fontFamily:"inherit" }} />
+            </div>
+          </div>
+
+          {/* Reset (Update 1) */}
+          <div style={{ background: "#2D3035", border: "1px solid #ef444444", borderRadius: 12, padding: 20, marginBottom: 16 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "#ef4444", marginBottom: 8 }}>🗑 Reset All Data</div>
+            <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 14 }}>Permanently deletes all job cards and resets the app. Requires admin PIN. This cannot be undone.</p>
+            <button onClick={()=>setShowReset(true)} style={{ background:"#dc2626", color:"#fff", border:"none", borderRadius:8, padding:"10px 20px", fontWeight:700, cursor:"pointer", fontSize:13 }}>🗑 Reset App Data</button>
+          </div>
+
           {/* Data stats */}
           <div style={{ marginTop: 20, background: "#2D3035", border: "1px solid #374151", borderRadius: 10, padding: "14px 18px" }}>
             <div style={{ fontSize: 11, color: "#6B7280", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Current Data Summary</div>
@@ -666,6 +660,23 @@ export default function AutoShopPro() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Reset Modal (Update 1) */}
+      {showReset && (
+        <ResetModal
+          adminPin={adminPin}
+          accent="#2E86AB"
+          cardBg="#1f2330"
+          onCancel={()=>setShowReset(false)}
+          onConfirm={()=>{
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(LICENSE_KEY);
+            localStorage.removeItem(STORAGE_KEY+"_inst");
+            setShowReset(false);
+            window.location.reload();
+          }}
+        />
       )}
 
       {/* Restore Confirmation Modal */}
